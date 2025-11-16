@@ -1,6 +1,16 @@
 <?php
 session_start(); // Mulai session untuk membaca pesan error
 
+// ... (di dalam blok if ($stmt_update->execute()))
+if ($stmt_update->execute()) {
+    // Sukses
+    $_SESSION['flash_message'] = "Password Anda berhasil diperbarui."; // <-- PASTIKAN BARIS INI ADA
+    header("location: my_events.php");
+    exit();
+} 
+// ...
+
+if (isset($_SESSION[""]) && $_SESSION[""]
 // Jika sudah login, redirect ke dashboard
 if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
     header("location: dashboard.php");

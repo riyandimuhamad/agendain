@@ -1,84 +1,90 @@
 <?php
-session_start(); // Mulai session
-require_once 'config.php'; // Sertakan koneksi database
+session_start();
+require_once 'config.php'; // config.php sekarang juga berisi fungsi handleUploadGambar
 
-// Cek otentikasi (pastikan user sudah login)
+// Cek otentikasi
 if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
     header("location: login.php");
     exit;
 }
 
-$errors = []; // Array untuk menampung pesan error
+$errors = []; // Array untuk error
 
-// Cek apakah request method adalah POST
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    // ==== VALIDASI CSRF TOKEN ====
+    // Validasi CSRF Token
     if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
          die("ERROR: Invalid CSRF token.");
     }
-    // =============================
 
-    // Ambil data dari formulir
     $nama_event = trim($_POST['nama_event']);
-    $deskripsi = trim($_POST['deskripsi']); // Deskripsi boleh kosong
+    $deskripsi = trim($_POST['deskripsi']);
     $tanggal_mulai = trim($_POST['tanggal_mulai']);
-    $kategori_event = isset($_POST['kategori_event']) ? trim($_POST['kategori_event']) : ''; // Cek isset untuk radio
+    $kategori_event = isset($_POST['kategori_event']) ? trim($_POST['kategori_event']) : '';
     $user_id = $_SESSION['user_id'];
+    $namaFileGambar = null; // Variabel untuk menyimpan nama file gambar
 
-    // --- VALIDASI INPUT EVENT ---
-    if (empty($nama_event)) $errors[] = "Nama event wajib diisi.";
-    if (empty($tanggal_mulai)) {
-        $errors[] = "Tanggal & waktu mulai wajib diisi.";
-    } elseif (strtotime($tanggal_mulai) === false) { // Cek format tanggal valid
-        $errors[] = "Format tanggal & waktu mulai tidak valid.";
-    }
-    if (empty($kategori_event)) $errors[] = "Kategori event wajib dipilih.";
-    // --- AKHIR VALIDASI ---
+    try {
+        // --- 1. PROSES UPLOAD GAMBAR DULU ---
+        // Cek apakah ada file gambar yang dikirim
+        if (isset($_FILES['gambar_event']) && $_FILES['gambar_event']['error'] == UPLOAD_ERR_OK) {
+            $uploadDir = 'uploads/posters/'; // Direktori tujuan
+            $namaFileGambar = handleUploadGambar($_FILES['gambar_event'], $uploadDir);
+        }
+        // Jika handleUploadGambar melempar Exception (error validasi), akan ditangkap oleh catch di bawah
 
-    // Jika tidak ada error validasi, lanjutkan proses simpan
-    if (empty($errors)) {
-        $sql = "INSERT INTO events (user_id, nama_event, deskripsi, tanggal_mulai, kategori_event)
-                VALUES (:user_id, :nama_event, :deskripsi, :tanggal_mulai, :kategori_event)";
+        // --- 2. VALIDASI INPUT EVENT ---
+        if (empty($nama_event)) $errors[] = "Nama event wajib diisi.";
+        if (empty($tanggal_mulai)) $errors[] = "Tanggal & waktu mulai wajib diisi.";
+        if (empty($kategori_event)) $errors[] = "Kategori event wajib dipilih.";
+        // --- AKHIR VALIDASI ---
 
-        try {
+        // Jika tidak ada error validasi, lanjutkan proses simpan
+        if (empty($errors)) {
+            // --- 3. MODIFIKASI SQL QUERY ---
+            $sql = "INSERT INTO events (user_id, nama_event, deskripsi, tanggal_mulai, kategori_event, gambar_event) 
+                    VALUES (:user_id, :nama_event, :deskripsi, :tanggal_mulai, :kategori_event, :gambar_event)";
+
             if ($stmt = $pdo->prepare($sql)) {
                 $stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
                 $stmt->bindParam(':nama_event', $nama_event, PDO::PARAM_STR);
                 $stmt->bindParam(':deskripsi', $deskripsi, PDO::PARAM_STR);
                 $stmt->bindParam(':tanggal_mulai', $tanggal_mulai, PDO::PARAM_STR);
                 $stmt->bindParam(':kategori_event', $kategori_event, PDO::PARAM_STR);
+                // Bind parameter gambar_event (bisa jadi null jika tidak di-upload)
+                $stmt->bindParam(':gambar_event', $namaFileGambar, PDO::PARAM_STR);
 
                 if ($stmt->execute()) {
-                    // Berhasil, set flash message dan redirect ke dashboard
                     $_SESSION['flash_message'] = "Event baru berhasil dibuat.";
                     header("location: dashboard.php");
                     exit();
                 } else {
                     $errors[] = "Oops! Terjadi kesalahan server saat menyimpan.";
                 }
-                unset($stmt); // Tutup statement
+                unset($stmt);
             } else {
                  $errors[] = "Oops! Terjadi kesalahan server.";
             }
-        } catch (PDOException $e) {
-             $errors[] = "Oops! Terjadi kesalahan database: " . $e->getMessage(); // Tampilkan error DB jika terjadi
         }
+    } catch (PDOException $e) {
+        // Error spesifik database
+        $errors[] = "Oops! Terjadi kesalahan database: " . $e->getMessage();
+    } catch (Exception $e) {
+        // Error dari handleUploadGambar (misal: file terlalu besar, tipe salah)
+        $errors[] = $e->getMessage();
     }
 
-    // Jika ada error (validasi atau SQL), simpan ke session dan kembali ke form
+    // Jika ada error (validasi atau upload), simpan ke session dan kembali ke form
     if (!empty($errors)) {
         $_SESSION['form_errors'] = $errors;
-        $_SESSION['form_input'] = $_POST; // Simpan input agar form terisi kembali
+        $_SESSION['form_input'] = $_POST;
         header("location: create_event.php");
         exit();
     }
 
 } else {
-    // Jika halaman diakses langsung (bukan POST), redirect ke form
     header("location: create_event.php");
     exit();
 }
-// Tutup koneksi jika proses sampai sini
 unset($pdo);
 ?>

@@ -16,6 +16,7 @@ $csrf_token = $_SESSION['csrf_token'];
 // Ambil error & input dari session (jika ada setelah submit gagal)
 $errors = isset($_SESSION['form_errors']) ? $_SESSION['form_errors'] : [];
 $input = isset($_SESSION['form_input']) ? $_SESSION['form_input'] : [];
+// Hapus dari session agar tidak muncul lagi
 unset($_SESSION['form_errors']);
 unset($_SESSION['form_input']);
 ?>
@@ -30,77 +31,116 @@ unset($_SESSION['form_input']);
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
         body { font-family: 'Poppins', sans-serif; }
+        
+        /* CSS untuk Sidebar Toggle */
+        #sidebar {
+            transition: margin-left 0.3s ease-in-out;
+        }
+        #main-content {
+            transition: margin-left 0.3s ease-in-out;
+            margin-left: 16rem; /* 256px */
+        }
+        #sidebar.collapsed {
+            margin-left: -16rem; /* -256px */
+        }
+        #main-content.sidebar-collapsed {
+            margin-left: 0;
+        }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-50 flex"> 
+    
+    <?php include 'sidebar.php'; ?>
 
-    <?php if (!empty($errors)): ?>
-    <div class="fixed top-5 right-5 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg max-w-sm z-50" role="alert">
-        <strong class="font-bold">Gagal Membuat Event:</strong>
-        <ul class="mt-2 list-disc list-inside">
-            <?php foreach ($errors as $error): ?>
-                <li><?php echo htmlspecialchars($error); ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-    <?php endif; ?>
-    <header class="bg-white shadow-md">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-green-600">Agendain</h1>
-            <div>
-                <a href="dashboard.php" class="text-gray-600 hover:text-green-600 mr-4">Dashboard</a>
-                <a href="logout.php" class="bg-red-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-600 transition duration-300">
-                    Logout
-                </a>
+    <div id="main-content" class="flex-grow">
+
+        <?php include 'header_panitia.php'; ?>
+
+        <main class="container mx-auto px-6 py-8">
+            
+            <?php if (!empty($errors)): ?>
+            <div class="fixed top-20 right-5 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg max-w-sm z-50" role="alert">
+                <strong class="font-bold">Gagal Membuat Event:</strong>
+                <ul class="mt-2 list-disc list-inside">
+                    <?php foreach ($errors as $error): ?>
+                        <li><?php echo htmlspecialchars($error); ?></li>
+                    <?php endforeach; ?>
+                </ul>
             </div>
-        </div>
-    </header>
+            <?php endif; ?>
+            
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">Buat Event Baru</h2>
+            
+            <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl mx-auto">
+                
+                <form action="proses_create_event.php" method="POST" enctype="multipart/form-data">
+                    
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
-    <main class="container mx-auto px-6 py-8">
-        <h2 class="text-3xl font-bold text-gray-800 mb-6">Buat Event Baru</h2>
-
-        <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl mx-auto">
-            <form action="proses_create_event.php" method="POST">
-                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
-
-                <div class="mb-4">
-                    <label for="nama_event" class="block text-gray-700 font-semibold mb-2">Nama Event</label>
-                    <input type="text" id="nama_event" name="nama_event" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Contoh: Seminar Technopreneurship 2025" value="<?php echo isset($input['nama_event']) ? htmlspecialchars($input['nama_event']) : ''; ?>" required>
-                </div>
-
-                <div class="mb-4">
-                    <label for="deskripsi" class="block text-gray-700 font-semibold mb-2">Deskripsi</label>
-                    <textarea id="deskripsi" name="deskripsi" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Jelaskan tentang event Anda..."><?php echo isset($input['deskripsi']) ? htmlspecialchars($input['deskripsi']) : ''; ?></textarea>
-                </div>
-
-                <div class="mb-4">
-                    <label for="tanggal_mulai" class="block text-gray-700 font-semibold mb-2">Tanggal & Waktu Mulai</label>
-                    <input type="datetime-local" id="tanggal_mulai" name="tanggal_mulai" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value="<?php echo isset($input['tanggal_mulai']) ? htmlspecialchars($input['tanggal_mulai']) : ''; ?>" required>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-gray-700 font-semibold mb-2">Kategori Event</label>
-                    <div class="flex items-center space-x-4">
-                        <label class="flex items-center">
-                            <input type="radio" name="kategori_event" value="Kampus" class="form-radio text-green-500" <?php echo (isset($input['kategori_event']) && $input['kategori_event'] == 'Kampus') ? 'checked' : (!isset($input['kategori_event']) ? 'checked' : ''); ?>>
-                            <span class="ml-2 text-gray-700">Kampus</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="radio" name="kategori_event" value="Umum" class="form-radio text-green-500" <?php echo (isset($input['kategori_event']) && $input['kategori_event'] == 'Umum') ? 'checked' : ''; ?>>
-                            <span class="ml-2 text-gray-700">Umum</span>
-                        </label>
+                    <div class="mb-4">
+                        <label for="nama_event" class="block text-gray-700 font-semibold mb-2">Nama Event</label>
+                        <input type="text" id="nama_event" name="nama_event" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Contoh: Seminar Technopreneurship 2025" value="<?php echo isset($input['nama_event']) ? htmlspecialchars($input['nama_event']) : ''; ?>" required>
                     </div>
-                </div>
 
-                <div class="flex items-center justify-end space-x-4">
-                    <a href="dashboard.php" class="text-gray-600 font-medium py-2 px-4 rounded-lg hover:bg-gray-100 transition duration-300">Batal</a>
-                    <button type="submit" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition duration-300">
-                        Buat Event
-                    </button>
-                </div>
-            </form>
-        </div>
-    </main>
+                    <div class="mb-4">
+                        <label for="deskripsi" class="block text-gray-700 font-semibold mb-2">Deskripsi</label>
+                        <textarea id="deskripsi" name="deskripsi" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Jelaskan tentang event Anda..."><?php echo isset($input['deskripsi']) ? htmlspecialchars($input['deskripsi']) : ''; ?></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="tanggal_mulai" class="block text-gray-700 font-semibold mb-2">Tanggal & Waktu Mulai</label>
+                        <input type="datetime-local" id="tanggal_mulai" name="tanggal_mulai" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500" value="<?php echo isset($input['tanggal_mulai']) ? htmlspecialchars($input['tanggal_mulai']) : ''; ?>" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="gambar_event" class="block text-gray-700 font-semibold mb-2">Poster Event (Opsional)</label>
+                        <input type="file" id="gambar_event" name="gambar_event" 
+                               class="w-full px-3 py-2 border rounded-lg file:mr-4 file:py-2 file:px-4
+                                      file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                                      file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                               accept="image/png, image/jpeg, image/jpg">
+                        <p class="text-xs text-gray-500 mt-1">Hanya format .jpg, .jpeg, atau .png. Maksimal 2MB.</p>
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-gray-700 font-semibold mb-2">Kategori Event</label>
+                        <div class="flex items-center space-x-4">
+                            <label class="flex items-center">
+                                <input type="radio" name="kategori_event" value="Kampus" class="form-radio text-green-500" <?php echo (isset($input['kategori_event']) && $input['kategori_event'] == 'Kampus') ? 'checked' : (!isset($input['kategori_event']) ? 'checked' : ''); ?>>
+                                <span class="ml-2 text-gray-700">Kampus</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="radio" name="kategori_event" value="Umum" class="form-radio text-green-500" <?php echo (isset($input['kategori_event']) && $input['kategori_event'] == 'Umum') ? 'checked' : ''; ?>>
+                                <span class="ml-2 text-gray-700">Umum</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end space-x-4">
+                        <a href="dashboard.php" class="text-gray-600 font-medium py-2 px-4 rounded-lg hover:bg-gray-100 transition duration-300">Batal</a>
+                        <button type="submit" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition duration-300">
+                            Buat Event
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </main>
+        
+    </div> 
+    
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const toggleButton = document.getElementById("toggleButton");
+        const sidebar = document.getElementById("sidebar");
+        const mainContent = document.getElementById("main-content");
+
+        if (toggleButton && sidebar && mainContent) {
+            toggleButton.addEventListener("click", function() {
+                sidebar.classList.toggle("collapsed");
+                mainContent.classList.toggle("sidebar-collapsed");
+            });
+        }
+    });
+    </script>
 
 </body>
 </html>
