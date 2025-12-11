@@ -17,7 +17,7 @@ $csrf_token = $_SESSION['csrf_token'];
 // Sertakan file koneksi database
 require_once 'config.php';
 
-// Ambil Flash Message jika ada (misal setelah hapus peserta)
+// Ambil Flash Message jika ada
 $flash_message = isset($_SESSION['flash_message']) ? $_SESSION['flash_message'] : null;
 unset($_SESSION['flash_message']); // Hapus setelah dibaca
 
@@ -26,7 +26,7 @@ unset($_SESSION['flash_message']); // Hapus setelah dibaca
 // ----------------------------------------------------
 $event = null;
 $participants = [];
-$event_id = 0; // Initialize event_id
+$event_id = 0; 
 
 // Variabel Paginasi
 $total_participants = 0;
@@ -42,7 +42,7 @@ try {
 
     $user_id = $_SESSION['user_id'];
 
-    // 2. Ambil detail event dari database
+    // 2. Ambil detail event dari database (SELECT * sudah otomatis ambil gambar_event)
     $sql_event = "SELECT * FROM events WHERE event_id = :event_id AND user_id = :user_id";
     $stmt_event = $pdo->prepare($sql_event);
     $stmt_event->bindParam(':event_id', $event_id, PDO::PARAM_INT);
@@ -50,18 +50,18 @@ try {
     $stmt_event->execute();
 
     if ($stmt_event->rowCount() == 1) {
-        $event = $stmt_event->fetch(PDO::FETCH_ASSOC); // Fetch as Assoc Array
+        $event = $stmt_event->fetch(PDO::FETCH_ASSOC);
     } else {
         throw new Exception("Event tidak ditemukan atau Anda tidak memiliki akses.");
     }
     unset($stmt_event);
 
     // 3. Paginasi Peserta
-    $limit_peserta = 10; // 10 peserta per halaman
+    $limit_peserta = 10;
     $page_peserta = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
     $offset_peserta = ($page_peserta > 0) ? ($page_peserta - 1) * $limit_peserta : 0;
 
-    // 3a. Hitung total peserta untuk event ini
+    // 3a. Hitung total peserta
     $sql_count_participants = "SELECT COUNT(*) FROM participants WHERE event_id = :event_id";
     $stmt_count_participants = $pdo->prepare($sql_count_participants);
     $stmt_count_participants->bindParam(':event_id', $event_id, PDO::PARAM_INT);
@@ -70,20 +70,20 @@ try {
     $total_pages_participants = ceil($total_participants / $limit_peserta);
     unset($stmt_count_participants);
 
-    // 3b. Ambil data peserta untuk halaman ini (JOIN dengan certificates)
+    // 3b. Ambil data peserta
     $sql_participants = "SELECT p.*, c.certificate_id, c.file_path 
                          FROM participants p 
                          LEFT JOIN certificates c ON p.participant_id = c.participant_id 
                          WHERE p.event_id = :event_id 
                          ORDER BY p.registered_at ASC
-                         LIMIT :limit OFFSET :offset"; // Tambahkan LIMIT OFFSET
+                         LIMIT :limit OFFSET :offset";
                          
     $stmt_participants = $pdo->prepare($sql_participants);
     $stmt_participants->bindParam(':event_id', $event_id, PDO::PARAM_INT);
-    $stmt_participants->bindParam(':limit', $limit_peserta, PDO::PARAM_INT); // Bind LIMIT
-    $stmt_participants->bindParam(':offset', $offset_peserta, PDO::PARAM_INT); // Bind OFFSET
+    $stmt_participants->bindParam(':limit', $limit_peserta, PDO::PARAM_INT);
+    $stmt_participants->bindParam(':offset', $offset_peserta, PDO::PARAM_INT);
     $stmt_participants->execute();
-    $participants = $stmt_participants->fetchAll(PDO::FETCH_ASSOC); // Fetch as Assoc Array
+    $participants = $stmt_participants->fetchAll(PDO::FETCH_ASSOC);
     unset($stmt_participants);
 
 } catch (PDOException $e) {
@@ -91,7 +91,6 @@ try {
 } catch (Exception $e) {
     die("ERROR: " . $e->getMessage());
 }
-// unset($pdo); // Kita masih butuh koneksi $pdo di bawah jika ada
 ?>
 
 <!DOCTYPE html>
@@ -105,13 +104,12 @@ try {
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
         body { font-family: 'Poppins', sans-serif; }
         
-        /* CSS untuk Sidebar Toggle */
         #sidebar { transition: margin-left 0.3s ease-in-out; }
         #main-content {
             transition: margin-left 0.3s ease-in-out;
-            margin-left: 16rem; /* 256px */
+            margin-left: 16rem; 
         }
-        #sidebar.collapsed { margin-left: -16rem; /* -256px */ }
+        #sidebar.collapsed { margin-left: -16rem; }
         #main-content.sidebar-collapsed { margin-left: 0; }
     </style>
 </head>
@@ -122,6 +120,7 @@ try {
         <?php include 'header_panitia.php'; ?>
 
         <main class="container mx-auto px-6 py-8">
+
             <?php if ($flash_message): ?>
                 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
                     <span class="block sm:inline"><?php echo htmlspecialchars($flash_message); ?></span>
@@ -130,22 +129,25 @@ try {
 
             <div class="mb-8 bg-white p-6 rounded-lg shadow-md">
                 <a href="dashboard.php" class="text-green-600 hover:underline mb-4 block">&larr; Kembali ke Dashboard</a>
+                
                 <h2 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars($event['nama_event'] ?? 'Event Tidak Ditemukan'); ?></h2>
-                <p class="text-gray-500">Tanggal: <?php echo isset($event['tanggal_mulai']) ? date('d F Y, H:i', strtotime($event['tanggal_mulai'])) : '-'; ?></p>
-                <p class="mt-4 text-gray-700"><?php echo isset($event['deskripsi']) ? nl2br(htmlspecialchars($event['deskripsi'])) : 'Tidak ada deskripsi.'; ?></p>
+                
                 <?php if (!empty($event['gambar_event'])): ?>
-                    <div class="mt-4">
+                    <div class="mt-4 mb-4">
                         <img src="uploads/posters/<?php echo htmlspecialchars($event['gambar_event']); ?>" 
                              alt="Poster <?php echo htmlspecialchars($event['nama_event']); ?>" 
-                             class="w-full max-w-lg mx-auto rounded-lg shadow-md">
+                             class="w-full max-w-md rounded-lg shadow-sm object-cover">
                     </div>
                 <?php endif; ?>
-                <p class="mt-4 text-sm text-gray-700 font-medium">
-                    Bagikan Link Pendaftaran:
-                    <a href="register_event.php?id=<?php echo $event_id; ?>" target="_blank" class="text-blue-600 hover:underline break-all">
+                <p class="text-gray-500 mt-2">Tanggal: <?php echo isset($event['tanggal_mulai']) ? date('d F Y, H:i', strtotime($event['tanggal_mulai'])) : '-'; ?></p>
+                <p class="mt-4 text-gray-700"><?php echo isset($event['deskripsi']) ? nl2br(htmlspecialchars($event['deskripsi'])) : 'Tidak ada deskripsi.'; ?></p>
+                
+                <p class="mt-6 text-sm text-gray-700 font-medium p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    🔗 Link Pendaftaran:
+                    <a href="register_event.php?id=<?php echo $event_id; ?>" target="_blank" class="text-blue-600 hover:underline break-all ml-1">
                         http://agendain.test/register_event.php?id=<?php echo $event_id; ?>
                     </a>
-                     <button onclick="copyLink('http://agendain.test/register_event.php?id=<?php echo $event_id; ?>')" class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300">Salin</button>
+                     <button onclick="copyLink('http://agendain.test/register_event.php?id=<?php echo $event_id; ?>')" class="ml-2 text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300 border border-gray-300">Salin</button>
                 </p>
             </div>
 
@@ -195,16 +197,16 @@ try {
                                                            target="_blank" 
                                                            class="text-purple-600 hover:underline text-sm font-medium"
                                                            title="Lihat Sertifikat PDF">
-                                                           Lihat Sertifikat
+                                                           Lihat
                                                         </a>
                                                     <?php endif; ?>
                                                 <?php else: ?>
-                                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Belum Hadir</span>
-                                                    <a href="update_kehadiran.php?participant_id=<?php echo $participant['participant_id']; ?>&event_id=<?php echo $event['event_id']; ?>&token=<?php echo $csrf_token; ?>" class="text-blue-600 hover:underline text-sm font-medium">Tandai Hadir</a>
+                                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Belum</span>
+                                                    <a href="update_kehadiran.php?participant_id=<?php echo $participant['participant_id']; ?>&event_id=<?php echo $event['event_id']; ?>&token=<?php echo $csrf_token; ?>" class="text-blue-600 hover:underline text-sm font-medium">Tandai</a>
                                                 <?php endif; ?>
                                                 <a href="delete_participant.php?participant_id=<?php echo $participant['participant_id']; ?>&event_id=<?php echo $event['event_id']; ?>&token=<?php echo $csrf_token; ?>"
                                                    class="text-red-600 hover:underline text-sm font-medium"
-                                                   onclick="return confirm('Apakah Anda yakin...?');">
+                                                   onclick="return confirm('Yakin hapus?');">
                                                    Hapus
                                                 </a>
                                             </div>
@@ -220,34 +222,27 @@ try {
                 <div class="mt-6 flex justify-between items-center">
                     <div>
                         <?php if ($page_peserta > 1): ?>
-                            <a href="detail_event.php?id=<?php echo $event_id; ?>&page=<?php echo $page_peserta - 1; ?>" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-l">
-                                &laquo; Sebelumnya
-                            </a>
+                            <a href="detail_event.php?id=<?php echo $event_id; ?>&page=<?php echo $page_peserta - 1; ?>" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-l">&laquo; Prev</a>
                         <?php else: ?>
-                            <span class="bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded-l cursor-not-allowed">
-                                &laquo; Sebelumnya
-                            </span>
+                            <span class="bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded-l cursor-not-allowed">&laquo; Prev</span>
                         <?php endif; ?>
                     </div>
-                    <div>
-                        <span class="text-gray-600 px-4">Halaman <?php echo $page_peserta; ?> dari <?php echo $total_pages_participants; ?></span>
-                    </div>
+                    <div><span class="text-gray-600 px-4">Hal <?php echo $page_peserta; ?> / <?php echo $total_pages_participants; ?></span></div>
                     <div>
                          <?php if ($page_peserta < $total_pages_participants): ?>
-                            <a href="detail_event.php?id=<?php echo $event_id; ?>&page=<?php echo $page_peserta + 1; ?>" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-r">
-                                Berikutnya &raquo;
-                            </a>
+                            <a href="detail_event.php?id=<?php echo $event_id; ?>&page=<?php echo $page_peserta + 1; ?>" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-r">Next &raquo;</a>
                         <?php else: ?>
-                            <span class="bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded-r cursor-not-allowed">
-                                 Berikutnya &raquo;
-                            </span>
+                            <span class="bg-gray-200 text-gray-500 font-bold py-2 px-4 rounded-r cursor-not-allowed">Next &raquo;</span>
                         <?php endif; ?>
                     </div>
                 </div>
                 <?php endif; ?>
-                </div> </main>
+            </div>
+        </main>
         
-    </div> <script>
+    </div> 
+
+    <script>
     document.addEventListener("DOMContentLoaded", function() {
         const toggleButton = document.getElementById("toggleButton");
         const sidebar = document.getElementById("sidebar");
@@ -269,6 +264,5 @@ try {
         });
     }
     </script>
-
 </body>
 </html>

@@ -1,23 +1,13 @@
 <?php
 session_start(); // Mulai session untuk membaca pesan error
 
-// ... (di dalam blok if ($stmt_update->execute()))
-if ($stmt_update->execute()) {
-    // Sukses
-    $_SESSION['flash_message'] = "Password Anda berhasil diperbarui."; // <-- PASTIKAN BARIS INI ADA
-    header("location: my_events.php");
-    exit();
-} 
-// ...
-
-if (isset($_SESSION[""]) && $_SESSION[""]
-// Jika sudah login, redirect ke dashboard
+// Cek apakah pengguna sudah login. Jika ya, redirect ke dashboard.
 if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
     header("location: dashboard.php");
     exit;
 }
 
-// Generate CSRF token
+// Generate CSRF token jika belum ada
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -54,6 +44,7 @@ unset($_SESSION['register_input']);
         </ul>
     </div>
     <?php endif; ?>
+
     <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <div class="text-center mb-8">
             <h1 class="text-3xl font-bold text-green-600">Buat Akun Agendain</h1>
@@ -61,7 +52,7 @@ unset($_SESSION['register_input']);
         </div>
 
         <form action="proses_register.php" method="POST">
-             <input type="hidden" name="csrf_token" value="<?php echo $csrf_token; ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
 
             <div class="mb-4">
                 <label for="nama_organisasi" class="block text-gray-700 font-semibold mb-2">Nama Organisasi</label>
