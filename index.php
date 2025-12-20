@@ -80,7 +80,7 @@ try {
     <section class="bg-white">
         <div class="container mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
             <div class="text-center">
-                <img src="images/PKKMB ITG-744.jpg" alt="Ilustrasi Manajemen Event Kampus" class="w-full h-auto rounded-lg shadow-md">
+                <img src="PKKMB ITG-744.jpg" alt="Ilustrasi Manajemen Event Kampus" class="w-full h-auto rounded-lg shadow-md">
             </div>
             <div class="text-center md:text-left">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">Manajemen Event Kampus Jadi Lebih Mudah.</h1>
